@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile } from 'fs/promises';
+import path from 'path';
+import { query } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth';
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = getUserFromRequest(req);
+  if (!user || user.role !== 'it_support') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const formData = await req.formData();
+    const notes = formData.get('notes') as string;
+    const file = formData.get('file') as File | null;
+
+    if (!notes) {
+      return NextResponse.json({ error: 'Resolution notes are required' }, { status: 400 });
+    }
+
+    await query('BEGIN');
+
+    const requestRes = await query(`
+      SELECT r.*, c.name as category_name
+      FROM requests r
+      JOIN categories c ON r.category_id = c.id
+      WHERE r.id = $1
+    `, [params.id]);
+
+    if (requestRes.rowCount === 0 || requestRes.rows[0].category_name !== 'IT Support') {
+      throw new Error('Invalid IT Support request');
+    }
+
+    await query(`
+      INSERT INTO approval_steps (request_id, approver_id, level, action, notes)
+      VALUES ($1, $2, $3, 'approved', $4)
+    `, [params.id, user.id, requestRes.rows[0].current_level, notes]);
+
+    if (file && file.size > 0) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filename = `${Date.now()}-support-${file.name.replace(/\s+/g, '_')}`;
+      const uploadPath = path.join(process.cwd(), 'public', 'uploads', filename);
+      await writeFile(uploadPath, buffer);
+
+      await query(`
+        INSERT INTO attachments (request_id, file_name, file_url)
+        VALUES ($1, $2, $3)
+      `, [params.id, file.name, `/uploads/${filename}`]);
+    }
+
+    await query(`
+      UPDATE requests
+      SET status = 'approved', updated_at = NOW()
+      WHERE id = $1
+    `, [params.id]);
+
+    await query(`
+      INSERT INTO audit_logs (actor_id, action_type, target_type, target_id, description, ip_address)
+      VALUES ($1, 'IT_SUPPORT_RESOLVE', 'request', $2, 'IT Support marked request as resolved', $3)
+    `, [user.id, params.id, req.ip || '']);
+
+    await query('COMMIT');
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    await query('ROLLBACK');
+    console.error(error);
+    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+  }
+}
