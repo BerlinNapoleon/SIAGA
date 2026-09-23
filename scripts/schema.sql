@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     name          VARCHAR(100)  NOT NULL,
     email         VARCHAR(150)  NOT NULL UNIQUE,
     password_hash TEXT          NOT NULL,
-    role          VARCHAR(20)   NOT NULL CHECK (role IN ('requester', 'approver', 'admin')),
+    role          VARCHAR(20)   NOT NULL CHECK (role IN ('requester', 'approver', 'admin', 'it_support')),
     department    VARCHAR(100),
     is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS categories (
     id              SERIAL PRIMARY KEY,
-    name            VARCHAR(100) NOT NULL,
+    name            VARCHAR(100) NOT NULL UNIQUE,
     description     TEXT,
     requires_levels SMALLINT     NOT NULL DEFAULT 1 CHECK (requires_levels IN (1, 2)),
     is_active       BOOLEAN      NOT NULL DEFAULT TRUE
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS requests (
                         'revision', 'approved', 'rejected'
                     )),
     current_level SMALLINT      NOT NULL DEFAULT 1,
+    leave_date    DATE,
     created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );

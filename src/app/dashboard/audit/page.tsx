@@ -42,6 +42,7 @@ export default function AuditTrailPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchLogs();
   }, []);
 
@@ -73,14 +74,14 @@ export default function AuditTrailPage() {
           <h1 className="text-title-lg font-medium">Audit Trail</h1>
           <p className="text-muted text-body-md mt-xs">Log aktivitas immutable untuk kebutuhan compliance.</p>
         </div>
-        <button onClick={exportCsv} className="py-sm px-md bg-primary text-on-primary rounded-lg font-medium w-full md:w-auto">
+        <button onClick={exportCsv} className="erp-button-primary w-full md:w-auto">
           Export CSV
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-sm bg-surface-soft border border-hairline rounded-md p-md mb-lg">
-        <input value={actor} onChange={(e) => setActor(e.target.value)} placeholder="Cari aktor" className="h-[44px] px-sm rounded-sm border border-hairline text-body-md" />
-        <select value={action} onChange={(e) => setAction(e.target.value)} className="h-[44px] px-sm rounded-sm border border-hairline text-body-md">
+        <input value={actor} onChange={(e) => setActor(e.target.value)} placeholder="Cari aktor" className="erp-input" />
+        <select value={action} onChange={(e) => setAction(e.target.value)} className="erp-input">
           <option value="">Semua aksi</option>
           <option value="LOGIN">LOGIN</option>
           <option value="LOGIN_FAILED">LOGIN_FAILED</option>
@@ -91,15 +92,15 @@ export default function AuditTrailPage() {
           <option value="REVISION_NEEDED">REVISION_NEEDED</option>
           <option value="IT_SUPPORT_RESOLVE">IT_SUPPORT_RESOLVE</option>
         </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-[44px] px-sm rounded-sm border border-hairline text-body-md" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-[44px] px-sm rounded-sm border border-hairline text-body-md" />
-        <button onClick={fetchLogs} disabled={loading} className="h-[44px] px-md bg-primary text-on-primary rounded-lg font-medium disabled:opacity-50">
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="erp-input" />
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="erp-input" />
+        <button onClick={fetchLogs} disabled={loading} className="erp-button-primary">
           {loading ? "Loading..." : "Filter"}
         </button>
       </div>
 
-      <div className="border border-hairline rounded-md overflow-x-auto bg-canvas">
-        <table className="w-full min-w-[900px] text-left border-collapse">
+      <div className="erp-table-wrap">
+        <table className="erp-table min-w-[900px]">
           <thead className="bg-surface-soft">
             <tr className="border-b border-hairline">
               <th className="py-sm px-sm font-medium text-label-md">Waktu</th>

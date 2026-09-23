@@ -10,6 +10,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [selectedAttachment, setSelectedAttachment] = useState<any>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ action: string; title: string } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -38,6 +39,15 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
       return;
     }
     
+    setConfirmDialog({
+      action,
+      title: action === 'approved' ? 'Konfirmasi Persetujuan' : action === 'rejected' ? 'Konfirmasi Penolakan' : 'Konfirmasi Permintaan Revisi'
+    });
+  };
+
+  const confirmAction = async () => {
+    if (!confirmDialog) return;
+    
     setLoading(true);
     const token = localStorage.getItem("token");
     try {
@@ -47,17 +57,20 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ action, notes })
+        body: JSON.stringify({ action: confirmDialog.action, notes })
       });
       if (res.ok) {
         router.push("/dashboard");
       } else {
-        alert("Gagal memproses approval.");
+        const error = await res.json();
+        alert(error.error || "Gagal memproses approval.");
       }
     } catch (e) {
       console.error(e);
+      alert("Terjadi kesalahan.");
     } finally {
       setLoading(false);
+      setConfirmDialog(null);
     }
   };
 
@@ -97,26 +110,91 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
   const canApprove = user.role === 'approver' && ['pending', 'in_review'].includes(request.status);
   const canSupportResolve = user.role === 'it_support' && request.category_name === 'IT Support' && ['pending', 'in_review'].includes(request.status);
   const canEdit = user.role === 'requester' && request.status === 'revision';
+  const canCancel = user.role === 'requester' && ['pending', 'draft'].includes(request.status);
   const isImagePreview = selectedAttachment && /\.(png|jpg|jpeg|gif|webp)$/i.test(selectedAttachment.file_name);
   const isPdfPreview = selectedAttachment && /\.pdf$/i.test(selectedAttachment.file_name);
 
+  const handleCancel = async () => {
+    if (!window.confirm('Apakah Anda yakin ingin membatalkan request ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/requests/${params.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        router.push("/dashboard");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Gagal membatalkan request.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Terjadi kesalahan.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl flex flex-col lg:flex-row gap-lg">
-      <div className="flex-1 bg-canvas border border-hairline p-xl rounded-md shadow-sm">
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-lg max-w-md">
+            <h2 className="text-title-lg font-medium mb-md">{confirmDialog.title}</h2>
+            <p className="text-body-md text-muted mb-lg">
+              Request: <strong>{request.title}</strong>
+            </p>
+            <p className="text-body-md text-muted mb-lg">
+              ⚠ Tindakan ini tidak dapat dibatalkan. Lanjutkan?
+            </p>
+            <div className="flex gap-md">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="flex-1 py-sm px-md bg-surface-soft text-ink rounded-md hover:bg-surface-strong transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmAction}
+                disabled={loading}
+                className="flex-1 py-sm px-md bg-primary text-on-primary rounded-md hover:bg-primary-active transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Memproses...' : 'Ya, Lanjutkan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 erp-card p-md md:p-xl">
         <div className="mb-md">
           <Link href="/dashboard" className="text-link text-body-md hover:underline">← Kembali ke Antrian</Link>
         </div>
         
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-sm mb-sm">
           <h2 className="text-title-lg font-medium">ID: #{request.id} - {request.title}</h2>
-          {canEdit && (
-            <Link 
-              href={`/dashboard/requests/${request.id}/edit`}
-              className="py-sm px-md bg-info text-on-primary font-medium rounded-md hover:bg-info-border transition-colors text-body-md"
-            >
-              ✏️ Edit & Resubmit
-            </Link>
-          )}
+          <div className="flex gap-sm">
+            {canEdit && (
+              <Link 
+                href={`/dashboard/requests/${request.id}/edit`}
+                className="py-sm px-md bg-info text-on-primary font-medium rounded-md hover:bg-info-border transition-colors text-body-md"
+              >
+                ✏️ Edit & Resubmit
+              </Link>
+            )}
+            {canCancel && (
+              <button 
+                onClick={handleCancel}
+                disabled={loading}
+                className="py-sm px-md bg-signature-coral text-on-primary font-medium rounded-md hover:opacity-90 transition-colors text-body-md disabled:opacity-50"
+              >
+                ❌ Batalkan
+              </button>
+            )}
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-sm mb-lg text-body-md">
@@ -174,8 +252,9 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
                   <a href={selectedAttachment.file_url} download={selectedAttachment.file_name} className="text-link text-body-md hover:underline">Download</a>
                 </div>
                 {isImagePreview ? (
-                  <div className="p-sm bg-canvas overflow-auto max-h-[80vh]">
-                    <img src={selectedAttachment.file_url} alt={selectedAttachment.file_name} className="max-w-full h-auto mx-auto rounded-sm" />
+                   <div className="p-sm bg-canvas overflow-auto max-h-[80vh]">
+                     {/* eslint-disable-next-line @next/next/no-img-element */}
+                     <img src={selectedAttachment.file_url} alt={selectedAttachment.file_name} className="max-w-full h-auto mx-auto rounded-sm" />
                   </div>
                 ) : isPdfPreview ? (
                   <iframe src={selectedAttachment.file_url} className="w-full h-[80vh] min-h-[520px] bg-canvas" />
@@ -247,21 +326,21 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
             <button 
               disabled={loading}
               onClick={() => handleAction('approved')}
-              className="w-full py-sm bg-success text-on-primary font-medium rounded-md hover:bg-success-border transition-colors"
+              className="w-full py-sm bg-success text-on-primary font-medium rounded-md hover:bg-success-border transition-colors disabled:opacity-50"
             >
               ✅ APPROVE
             </button>
             <button 
               disabled={loading}
               onClick={() => handleAction('revision_needed')}
-              className="w-full py-sm bg-canvas text-ink font-medium rounded-md hover:bg-surface-strong transition-colors"
+              className="w-full py-sm bg-canvas text-ink font-medium rounded-md hover:bg-surface-strong transition-colors disabled:opacity-50"
             >
               🔄 MINTA REVISI
             </button>
             <button 
               disabled={loading}
               onClick={() => handleAction('rejected')}
-              className="w-full py-sm bg-signature-coral text-on-primary font-medium rounded-md hover:opacity-90 transition-colors"
+              className="w-full py-sm bg-signature-coral text-on-primary font-medium rounded-md hover:opacity-90 transition-colors disabled:opacity-50"
             >
               ❌ TOLAK REQUEST
             </button>

@@ -75,18 +75,21 @@ export default function NewRequestPage() {
   const minDateString = tomorrow.toISOString().split("T")[0];
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-lg border-b border-hairline pb-sm">
-        <h1 className="text-title-lg font-medium">➕ New Request</h1>
+    <div className="max-w-3xl erp-card">
+      <div className="erp-card-header">
+        <div>
+          <h1 className="text-title-lg font-medium">New Request</h1>
+          <p className="text-body-md text-muted mt-[2px]">Ajukan request internal untuk diproses sesuai workflow.</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-md">
+      <form onSubmit={handleSubmit} className="erp-card-body space-y-md">
         <div>
-          <label className="block text-label-md mb-xs">Kategori *</label>
+          <label className="erp-label">Kategori *</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+            className="erp-input"
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -103,42 +106,42 @@ export default function NewRequestPage() {
 
         {selectedCategory && selectedCategory.name.toLowerCase().includes("cuti") && (
           <div>
-            <label className="block text-label-md mb-xs">Tanggal Cuti *</label>
+            <label className="erp-label">Tanggal Cuti *</label>
             <input
               type="date"
               required
               min={minDateString}
               value={leaveDate}
               onChange={(e) => setLeaveDate(e.target.value)}
-              className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+              className="erp-input"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-label-md mb-xs">Judul Request *</label>
+          <label className="erp-label">Judul Request *</label>
           <input
             type="text"
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Contoh: Permohonan Akses VPN Dev Environment"
-            className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+            className="erp-input"
           />
         </div>
 
         <div>
-          <label className="block text-label-md mb-xs">Deskripsi / Justifikasi *</label>
+          <label className="erp-label">Deskripsi / Justifikasi *</label>
           <textarea
             required
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-[16px] min-h-[120px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+            className="erp-textarea"
           />
         </div>
 
         <div>
-          <label className="block text-label-md mb-xs">Prioritas *</label>
+          <label className="erp-label">Prioritas *</label>
           <div className="flex gap-lg">
             {["low", "medium", "high"].map((p) => (
               <label key={p} className="flex items-center gap-xs cursor-pointer">
@@ -157,7 +160,7 @@ export default function NewRequestPage() {
         </div>
 
         <div>
-          <label className="block text-label-md mb-xs">Lampiran Dokumen (Opsional)</label>
+          <label className="erp-label">Lampiran Dokumen (Opsional)</label>
           <input
             type="file"
             onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
@@ -169,7 +172,7 @@ export default function NewRequestPage() {
           <button
             type="submit"
             disabled={loading}
-            className="py-[16px] px-[24px] bg-primary text-on-primary rounded-lg font-medium hover:bg-primary-active transition-colors disabled:opacity-50"
+            className="erp-button-primary"
           >
             {loading ? "Menyimpan..." : "Submit Request →"}
           </button>

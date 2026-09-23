@@ -14,7 +14,7 @@ async function seedCategories() {
       ('Perubahan Akses Sistem', 'Permintaan akses VPN, Database, dll', 2),
       ('IT Support', 'Permintaan perbaikan hardware/software', 1),
       ('Approval Limit Transaksi', 'Kenaikan limit transaksi sementara', 2)
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT (name) DO NOTHING;
     `);
     console.log('Categories seeded successfully.');
   } catch (err) {
