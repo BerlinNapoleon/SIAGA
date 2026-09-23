@@ -1,0 +1,180 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+type Category = {
+  id: number;
+  name: string;
+  requires_levels: number;
+};
+
+export default function NewRequestPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [leaveDate, setLeaveDate] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        setCategories(data);
+        if (data.length > 0) setCategoryId(data[0].id.toString());
+      });
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      const formData = new FormData();
+      formData.append("category_id", categoryId);
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("priority", priority);
+      if (leaveDate) {
+        formData.append("leave_date", leaveDate);
+      }
+      if (file) {
+        formData.append("file", file);
+      }
+
+      const res = await fetch("/api/requests", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        router.push("/dashboard");
+      } else {
+        alert("Gagal membuat request");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedCategory = categories.find((c) => c.id.toString() === categoryId);
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDateString = tomorrow.toISOString().split("T")[0];
+
+  return (
+    <div className="max-w-2xl">
+      <div className="mb-lg border-b border-hairline pb-sm">
+        <h1 className="text-title-lg font-medium">➕ New Request</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-md">
+        <div>
+          <label className="block text-label-md mb-xs">Kategori *</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+          >
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {selectedCategory && (
+            <p className="text-body-md text-info mt-xs">
+              ℹ Kategori ini memerlukan {selectedCategory.requires_levels} level approval.
+            </p>
+          )}
+        </div>
+
+        {selectedCategory && selectedCategory.name.toLowerCase().includes("cuti") && (
+          <div>
+            <label className="block text-label-md mb-xs">Tanggal Cuti *</label>
+            <input
+              type="date"
+              required
+              min={minDateString}
+              value={leaveDate}
+              onChange={(e) => setLeaveDate(e.target.value)}
+              className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-label-md mb-xs">Judul Request *</label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Contoh: Permohonan Akses VPN Dev Environment"
+            className="w-full h-[44px] px-[16px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+          />
+        </div>
+
+        <div>
+          <label className="block text-label-md mb-xs">Deskripsi / Justifikasi *</label>
+          <textarea
+            required
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full p-[16px] min-h-[120px] bg-canvas text-ink text-body-md rounded-sm border border-hairline focus:outline-none focus:border-info-border"
+          />
+        </div>
+
+        <div>
+          <label className="block text-label-md mb-xs">Prioritas *</label>
+          <div className="flex gap-lg">
+            {["low", "medium", "high"].map((p) => (
+              <label key={p} className="flex items-center gap-xs cursor-pointer">
+                <input
+                  type="radio"
+                  name="priority"
+                  value={p}
+                  checked={priority === p}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="w-4 h-4 text-primary"
+                />
+                <span className="capitalize text-body-md">{p}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-label-md mb-xs">Lampiran Dokumen (Opsional)</label>
+          <input
+            type="file"
+            onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+            className="w-full text-body-md"
+          />
+        </div>
+
+        <div className="pt-sm">
+          <button
+            type="submit"
+            disabled={loading}
+            className="py-[16px] px-[24px] bg-primary text-on-primary rounded-lg font-medium hover:bg-primary-active transition-colors disabled:opacity-50"
+          >
+            {loading ? "Menyimpan..." : "Submit Request →"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
